@@ -1,5 +1,8 @@
 class Route {
 
+  wildcardRoute = null;
+  parameterRoute = null;
+
   constructor({
     parent,
     key,
@@ -20,6 +23,11 @@ class Route {
 
   addChild(route) {
     this.children.set(route.key, route);
+    if (route.routeType === 'wildcard') {
+      this.wildcardRoute = route;
+    } else if (route.routeType === 'parameter') {
+      this.parameterRoute = route;
+    }
   }
 }
 
@@ -28,7 +36,6 @@ export class Router {
   static parameterTypes = {
     ':': 'parameter',
     '*': 'wildcard',
-    '': 'part',
   }
 
   constructor() {
@@ -56,19 +63,24 @@ export class Router {
     return normalizedPath;
   }
 
+  static getRouteType(key) {
+    const firstChar = key.charAt(0);
+    if (!Object.keys(Router.parameterTypes).includes(firstChar)) return 'part';
+    return Router.parameterTypes[firstChar];
+  }
+
+  static getRouteParameter(key, routeType) {
+    return routeType === 'parameter' ? key.slice(1) : undefined;
+  }
+
   addRoute(path, payload) {
     const normalizedPath = Router.normalizePath(path);
-    const keys = normalizedPath.split('/').toSpliced(0, 1)
+    const keys = normalizedPath.split('/').toSpliced(0, 1);
     let currentNode = this.routerTree;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
-
-      let routeType = Router.parameterTypes[''];
-      if (key.startsWith(':')) {
-        routeType = Router.parameterTypes[':'];
-      } else if (key.startsWith('*')) {
-        routeType = Router.parameterTypes['*'];
-      }
+      const routeType = Router.getRouteType(key);
+      const parameter = Router.getRouteParameter(key, routeType);
 
       if (!childNode) {
         childNode = new Route({
@@ -76,7 +88,7 @@ export class Router {
           key,
           routeType,
           nodeType: 'branch',
-          parameter: routeType === 'parameter' ? key.slice(1) : undefined,
+          parameter,
         });
         currentNode.addChild(childNode);
       }
@@ -95,11 +107,10 @@ export class Router {
     let wildcardFallback = null;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
-      const currentRouteChildren = [...currentNode.children.values()];
-      const wildcardNode = currentRouteChildren.find(child => child.routeType === 'wildcard');
+      const wildcardNode = currentNode.wildcardRoute;
       wildcardFallback = wildcardNode ?? wildcardFallback;
       if (!childNode) {
-        childNode = currentRouteChildren.find(child => child.routeType === 'parameter');
+        childNode = currentNode.parameterRoute;
       }
       if (!childNode) {
         childNode = wildcardNode
