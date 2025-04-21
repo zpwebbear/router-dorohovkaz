@@ -92,20 +92,25 @@ export class Router {
     let currentNode = this.routerTree;
     const positionalParameters = [];
     const keyParameters = new Map();
+    let wildcardFallback = null;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
+      const currentRouteChildren = [...currentNode.children.values()];
+      const wildcardNode = currentRouteChildren.find(child => child.routeType === 'wildcard');
+      wildcardFallback = wildcardNode ?? wildcardFallback;
       if (!childNode) {
-        childNode = [...currentNode.children.values()].find(child => child.routeType === 'parameter');
+        childNode = currentRouteChildren.find(child => child.routeType === 'parameter');
       }
       if (!childNode) {
-        childNode = [...currentNode.children.values()].find(child => child.routeType === 'wildcard');
+        childNode = wildcardNode
       }
       if (childNode && childNode.routeType === 'wildcard') {
         currentNode = childNode;
         break;
       }
       if (!childNode) {
-        return null;
+        currentNode = null;
+        break;
       }
       currentNode = childNode;
       if (currentNode.routeType === 'parameter') {
@@ -115,11 +120,11 @@ export class Router {
       }
     }
 
-    if (!currentNode) {
-      return null;
+    if (!currentNode && wildcardFallback) {
+      currentNode = wildcardFallback;
     }
 
-    if (currentNode.nodeType !== 'leaf') {
+    if (!currentNode || currentNode.nodeType !== 'leaf') {
       return null;
     }
 
