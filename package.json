@@ -1,19 +1,22 @@
 {
-  "name": "router-graph",
+  "name": "router-dorohovkaz",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "src/index.js",
+  "type": "module",
+  "types": "src/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "build:types": "tsc -p tsconfig.json",
     "build": "rollup -c",
     "lint": "eslint src --ext .js,.ts",
     "format": "prettier --write \"src/**/*.{js,ts}\"",
-    "lint:fix": "eslint src --ext .js,.ts --fix"
+    "lint:fix": "eslint src --ext .js,.ts --fix",
+    "start": "node src/index.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "Dmytro Brahinets <zp.babu@gmail.com>",
+  "license": "MIT",
+  "description": "A low level router for building a graph of routes. Can be used to build a router for any frontend or backend framework.",
   "devDependencies": {
     "@babel/core": "^7.26.10",
     "@babel/preset-env": "^7.26.9",
