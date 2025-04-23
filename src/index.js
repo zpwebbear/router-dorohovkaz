@@ -1,8 +1,7 @@
+const PARAMETER = Symbol('parameter');
+const WILDCARD = Symbol('wildcard');
+
 class Route {
-
-  wildcardRoute = null;
-  parameterRoute = null;
-
   constructor({
     parent,
     key,
@@ -22,12 +21,13 @@ class Route {
   }
 
   addChild(route) {
-    this.children.set(route.key, route);
-    if (route.routeType === 'wildcard') {
-      this.wildcardRoute = route;
-    } else if (route.routeType === 'parameter') {
-      this.parameterRoute = route;
+    let routeKey = route.key;
+    if (route.routeType === 'parameter') {
+      routeKey = PARAMETER;
+    } else if (route.routeType === 'wildcard') {
+      routeKey = WILDCARD;
     }
+    this.children.set(routeKey, route);
   }
 }
 
@@ -63,6 +63,12 @@ export class Router {
     return normalizedPath;
   }
 
+  static getRouteKeys(path) {
+    const normalizedPath = Router.normalizePath(path);
+    const keys = normalizedPath.split('/').toSpliced(0, 1);
+    return keys;
+  }
+
   static getRouteType(key) {
     const firstChar = key.charAt(0);
     if (!Object.keys(Router.parameterTypes).includes(firstChar)) return 'part';
@@ -74,8 +80,7 @@ export class Router {
   }
 
   addRoute(path, payload) {
-    const normalizedPath = Router.normalizePath(path);
-    const keys = normalizedPath.split('/').toSpliced(0, 1);
+    const keys = Router.getRouteKeys(path);
     let currentNode = this.routerTree;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
@@ -99,21 +104,20 @@ export class Router {
   }
 
   getRoute(path) {
-    const normalizedPath = Router.normalizePath(path);
-    const keys = normalizedPath.split('/').toSpliced(0, 1);
+    const keys = Router.getRouteKeys(path);
     let currentNode = this.routerTree;
     const positionalParameters = [];
     const keyParameters = new Map();
     let wildcardFallback = null;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
-      const wildcardNode = currentNode.wildcardRoute;
+      const wildcardNode = currentNode.children.get(WILDCARD);
       wildcardFallback = wildcardNode ?? wildcardFallback;
       if (!childNode) {
-        childNode = currentNode.parameterRoute;
+        childNode = currentNode.children.get(PARAMETER);
       }
       if (!childNode) {
-        childNode = wildcardNode
+        childNode = wildcardNode;
       }
       if (childNode && childNode.routeType === 'wildcard') {
         currentNode = childNode;
