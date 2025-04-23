@@ -9,11 +9,13 @@ declare interface RouteResult {
   keyParameters: Map<string, string>;
   routeType: 'part' | 'parameter' | 'wildcard';
   nodeType: 'root' | 'branch' | 'leaf';
+  path: string;
 }
 
 export declare class Router {
   constructor();
   static normalizePath(path: string): string;
+  static getRouteKeys(path: string): string[];
   addRoute(path: string, payload: any): void;
   getRoute(path: string): RouteResult | null;
 }

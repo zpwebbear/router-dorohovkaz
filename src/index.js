@@ -149,6 +149,7 @@ export class Router {
       keyParameters,
       routeType: currentNode.routeType,
       nodeType: currentNode.nodeType,
+      path
     };
     return response;
   }
