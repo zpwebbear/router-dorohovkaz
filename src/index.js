@@ -1,12 +1,31 @@
 const PARAMETER = Symbol('parameter');
 const WILDCARD = Symbol('wildcard');
+const ROOT = Symbol('root');
+
+const ROUTE_TYPES = {
+  part: 'part',
+  parameter: 'parameter',
+  wildcard: 'wildcard',
+};
+
+const NODE_TYPES = {
+  root: 'root',
+  branch: 'branch',
+  leaf: 'leaf',
+};
+
+const PARAMETER_TYPES = {
+  ':': ROUTE_TYPES.parameter,
+  '*': ROUTE_TYPES.wildcard,
+};
+
 
 class Route {
   constructor({
     parent,
     key,
     routeType,
-    nodeType = 'leaf',
+    nodeType = NODE_TYPES.leaf,
     payload = null,
     parameter = undefined,
     children = new Map(),
@@ -20,23 +39,22 @@ class Route {
     this.parameter = parameter;
   }
 
-  addChild(route) {
-    let routeKey = route.key;
-    if (route.routeType === 'parameter') {
-      routeKey = PARAMETER;
-    } else if (route.routeType === 'wildcard') {
-      routeKey = WILDCARD;
+  static getRouteKey(route) {
+    if (route.routeType === ROUTE_TYPES.parameter) {
+      return PARAMETER;
+    } else if (route.routeType === ROUTE_TYPES.wildcard) {
+      return WILDCARD;
     }
+    return route.key;
+  }
+
+  addChild(route) {
+    const routeKey = Route.getRouteKey(route);
     this.children.set(routeKey, route);
   }
 }
 
 export class Router {
-
-  static parameterTypes = {
-    ':': 'parameter',
-    '*': 'wildcard',
-  }
 
   constructor() {
     this.#initRouterTree();
@@ -45,9 +63,9 @@ export class Router {
   #initRouterTree() {
     const rootRouter = new Route({
       parent: null,
-      key: '/',
-      nodeType: 'root',
-      routeType: 'part',
+      key: ROOT,
+      nodeType: NODE_TYPES.root,
+      routeType: ROUTE_TYPES.part,
     });
     this.routerTree = rootRouter;
   }
@@ -71,12 +89,12 @@ export class Router {
 
   static getRouteType(key) {
     const firstChar = key.charAt(0);
-    if (!Object.keys(Router.parameterTypes).includes(firstChar)) return 'part';
-    return Router.parameterTypes[firstChar];
+    if (!Object.keys(PARAMETER_TYPES).includes(firstChar)) return ROUTE_TYPES.part;
+    return PARAMETER_TYPES[firstChar];
   }
 
   static getRouteParameter(key, routeType) {
-    return routeType === 'parameter' ? key.slice(1) : undefined;
+    return routeType === ROUTE_TYPES.parameter ? key.slice(1) : undefined;
   }
 
   addRoute(path, payload) {
@@ -92,15 +110,17 @@ export class Router {
           parent: currentNode,
           key,
           routeType,
-          nodeType: 'branch',
+          nodeType: NODE_TYPES.branch,
           parameter,
         });
         currentNode.addChild(childNode);
       }
       currentNode = childNode;
     }
+
+    // Last node is a leaf and handles the payload
     currentNode.payload = payload;
-    currentNode.nodeType = 'leaf';
+    currentNode.nodeType = NODE_TYPES.leaf;
   }
 
   getRoute(path) {
@@ -108,27 +128,39 @@ export class Router {
     let currentNode = this.routerTree;
     const positionalParameters = [];
     const keyParameters = new Map();
+
+    // If route has a wildcard but search will fall on the some step
     let wildcardFallback = null;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
       const wildcardNode = currentNode.children.get(WILDCARD);
       wildcardFallback = wildcardNode ?? wildcardFallback;
+
+      // If route isn't static we need to check if we have a parameter
       if (!childNode) {
         childNode = currentNode.children.get(PARAMETER);
       }
+
+      // If route isn't static or parametrized we need to check if we have a wildcard
       if (!childNode) {
         childNode = wildcardNode;
       }
-      if (childNode && childNode.routeType === 'wildcard') {
+
+      // If we route is wildcard we need to break the loop
+      if (childNode && childNode.routeType === ROUTE_TYPES.wildcard) {
         currentNode = childNode;
         break;
       }
+
+      // If child node is not found we need to break the loop
       if (!childNode) {
         currentNode = null;
         break;
       }
+      
       currentNode = childNode;
-      if (currentNode.routeType === 'parameter') {
+      // If child node is a parameter we need to add it to the positional parameters
+      if (currentNode.routeType === ROUTE_TYPES.parameter) {
         const currentParameter = { parameter: currentNode.parameter, value: key };
         positionalParameters.push(currentParameter);
         keyParameters.set(currentParameter.parameter, currentParameter.value);
@@ -139,11 +171,11 @@ export class Router {
       currentNode = wildcardFallback;
     }
 
-    if (!currentNode || currentNode.nodeType !== 'leaf') {
+    if (!currentNode || currentNode.nodeType !== NODE_TYPES.leaf) {
       return null;
     }
 
-    const response = {
+    return {
       payload: currentNode.payload,
       positionalParameters,
       keyParameters,
@@ -151,6 +183,5 @@ export class Router {
       nodeType: currentNode.nodeType,
       path
     };
-    return response;
   }
 }
