@@ -53,7 +53,7 @@ class Route {
     this.children.set(routeKey, route);
   }
 
-  getChild(key) {
+  getChildWithFallback(key) {
     let route = this.children.get(key)
     if (!route) {
       route = this.children.get(PARAMETER);
@@ -62,6 +62,10 @@ class Route {
       route = this.children.get(WILDCARD);
     }
     return route ?? null;
+  }
+
+  getChild(key) {
+    return this.children.get(key) ?? null;
   }
 }
 
@@ -72,13 +76,12 @@ export class Router {
   }
 
   #initRouterTree() {
-    const rootRouter = new Route({
+    this.routerTree = new Route({
       parent: null,
       key: ROOT,
       nodeType: NODE_TYPES.root,
       routeType: ROUTE_TYPES.part,
     });
-    this.routerTree = rootRouter;
   }
 
   static normalizePath(path) {
@@ -112,7 +115,7 @@ export class Router {
     const keys = Router.getRouteKeys(path);
     let currentNode = this.routerTree;
     for (const key of keys) {
-      let childNode = currentNode.children.get(key);
+      let childNode = currentNode.getChild(key);
       if (!childNode) {
         const routeType = Router.getRouteType(key);
         const parameter = Router.getRouteParameter(key, routeType);
@@ -142,9 +145,9 @@ export class Router {
     // If route has a wildcard but search will fall on the some step
     let wildcardFallback = null;
     for (const key of keys) {
-      const wildcardNode = currentNode.getChild(WILDCARD);
+      const wildcardNode = currentNode.getChildWithFallback(WILDCARD);
       wildcardFallback = wildcardNode ?? wildcardFallback;
-      currentNode = currentNode.getChild(key);
+      currentNode = currentNode.getChildWithFallback(key);
 
       // If we route is wildcard we need to break the loop
       if (currentNode === null || currentNode.routeType === ROUTE_TYPES.wildcard) {
