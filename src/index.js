@@ -52,6 +52,17 @@ class Route {
     const routeKey = Route.getRouteKey(route);
     this.children.set(routeKey, route);
   }
+
+  getChild(key) {
+    let route = this.children.get(key)
+    if (!route) {
+      route = this.children.get(PARAMETER);
+    }
+    if (!route) {
+      route = this.children.get(WILDCARD);
+    }
+    return route ?? null;
+  }
 }
 
 export class Router {
@@ -102,10 +113,9 @@ export class Router {
     let currentNode = this.routerTree;
     for (const key of keys) {
       let childNode = currentNode.children.get(key);
-      const routeType = Router.getRouteType(key);
-      const parameter = Router.getRouteParameter(key, routeType);
-
       if (!childNode) {
+        const routeType = Router.getRouteType(key);
+        const parameter = Router.getRouteParameter(key, routeType);
         childNode = new Route({
           parent: currentNode,
           key,
@@ -132,33 +142,15 @@ export class Router {
     // If route has a wildcard but search will fall on the some step
     let wildcardFallback = null;
     for (const key of keys) {
-      let childNode = currentNode.children.get(key);
-      const wildcardNode = currentNode.children.get(WILDCARD);
+      const wildcardNode = currentNode.getChild(WILDCARD);
       wildcardFallback = wildcardNode ?? wildcardFallback;
-
-      // If route isn't static we need to check if we have a parameter
-      if (!childNode) {
-        childNode = currentNode.children.get(PARAMETER);
-      }
-
-      // If route isn't static or parametrized we need to check if we have a wildcard
-      if (!childNode) {
-        childNode = wildcardNode;
-      }
+      currentNode = currentNode.getChild(key);
 
       // If we route is wildcard we need to break the loop
-      if (childNode && childNode.routeType === ROUTE_TYPES.wildcard) {
-        currentNode = childNode;
+      if (currentNode === null || currentNode.routeType === ROUTE_TYPES.wildcard) {
         break;
       }
 
-      // If child node is not found we need to break the loop
-      if (!childNode) {
-        currentNode = null;
-        break;
-      }
-      
-      currentNode = childNode;
       // If child node is a parameter we need to add it to the positional parameters
       if (currentNode.routeType === ROUTE_TYPES.parameter) {
         const currentParameter = { parameter: currentNode.parameter, value: key };
