@@ -39,7 +39,7 @@ class Route {
     this.parameter = parameter;
   }
 
-  static getRouteKey(route) {
+  static #getRouteKey(route) {
     if (route.routeType === ROUTE_TYPES.parameter) {
       return PARAMETER;
     } else if (route.routeType === ROUTE_TYPES.wildcard) {
@@ -49,7 +49,7 @@ class Route {
   }
 
   addChild(route) {
-    const routeKey = Route.getRouteKey(route);
+    const routeKey = Route.#getRouteKey(route);
     this.children.set(routeKey, route);
   }
 
@@ -84,7 +84,7 @@ export class Router {
     });
   }
 
-  static normalizePath(path) {
+  static #normalizePath(path) {
     let normalizedPath = path;
     if (path.endsWith('/')) {
       normalizedPath = path.slice(0, -1);
@@ -95,30 +95,30 @@ export class Router {
     return normalizedPath;
   }
 
-  static getRouteKeys(path) {
-    const normalizedPath = Router.normalizePath(path);
+  static #getRouteKeys(path) {
+    const normalizedPath = Router.#normalizePath(path);
     const keys = normalizedPath.split('/').toSpliced(0, 1);
     return keys;
   }
 
-  static getRouteType(key) {
+  static #getRouteType(key) {
     const firstChar = key.charAt(0);
     if (!Object.keys(PARAMETER_TYPES).includes(firstChar)) return ROUTE_TYPES.part;
     return PARAMETER_TYPES[firstChar];
   }
 
-  static getRouteParameter(key, routeType) {
+  static #getRouteParameter(key, routeType) {
     return routeType === ROUTE_TYPES.parameter ? key.slice(1) : undefined;
   }
 
   addRoute(path, payload) {
-    const keys = Router.getRouteKeys(path);
+    const keys = Router.#getRouteKeys(path);
     let currentNode = this.routerTree;
     for (const key of keys) {
       let childNode = currentNode.getChild(key);
       if (!childNode) {
-        const routeType = Router.getRouteType(key);
-        const parameter = Router.getRouteParameter(key, routeType);
+        const routeType = Router.#getRouteType(key);
+        const parameter = Router.#getRouteParameter(key, routeType);
         childNode = new Route({
           parent: currentNode,
           key,
@@ -137,7 +137,7 @@ export class Router {
   }
 
   getRoute(path) {
-    const keys = Router.getRouteKeys(path);
+    const keys = Router.#getRouteKeys(path);
     let currentNode = this.routerTree;
     const positionalParameters = [];
     const keyParameters = new Map();
