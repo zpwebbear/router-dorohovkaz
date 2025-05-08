@@ -54,14 +54,10 @@ class Route {
   }
 
   getChildWithFallback(key) {
-    let route = this.children.get(key)
-    if (!route) {
-      route = this.children.get(PARAMETER);
-    }
-    if (!route) {
-      route = this.children.get(WILDCARD);
-    }
-    return route ?? null;
+    return this.children.get(key) ??
+      this.children.get(PARAMETER) ??
+      this.children.get(WILDCARD) ?? 
+      null;
   }
 
   getChild(key) {
@@ -144,9 +140,10 @@ export class Router {
 
     // If route has a wildcard but search will fall on the some step
     let wildcardFallback = null;
+
     for (const key of keys) {
       const wildcardNode = currentNode.getChildWithFallback(WILDCARD);
-      wildcardFallback = wildcardNode ?? wildcardFallback;
+      if (wildcardNode) wildcardFallback = wildcardNode;
       currentNode = currentNode.getChildWithFallback(key);
 
       // If we route is wildcard we need to break the loop
