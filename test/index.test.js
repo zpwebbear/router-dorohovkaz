@@ -178,4 +178,13 @@ describe('Test Router Class', () => {
     strictEqual(route.keyParameters.get('id'), '456');
     strictEqual(route.keyParameters.get('name'), 'bob');
   });
+
+  test('Router supports search parameters', () => {
+    const router = new Router();
+    const payload = { name: 'search' };
+    router.addRoute('/search', payload);
+    const route = router.getRoute('/search?q=test');
+    strictEqual(route.payload, payload);
+    strictEqual(route.searchParams.get('q'), 'test');
+  });
 });

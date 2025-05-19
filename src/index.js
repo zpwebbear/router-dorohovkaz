@@ -35,17 +35,19 @@ class Route {
     this.routeType = routeType;
     this.nodeType = nodeType;
     this.payload = payload;
-    this.children = children;
     this.parameter = parameter;
+    this.children = children;
   }
 
   static #getRouteKey(route) {
-    if (route.routeType === ROUTE_TYPES.parameter) {
-      return PARAMETER;
-    } else if (route.routeType === ROUTE_TYPES.wildcard) {
-      return WILDCARD;
+    switch (route.routeType) {
+      case ROUTE_TYPES.parameter:
+        return PARAMETER;
+      case ROUTE_TYPES.wildcard:
+        return WILDCARD;
+      default:
+        return route.key;
     }
-    return route.key;
   }
 
   addChild(route) {
@@ -81,20 +83,20 @@ export class Router {
   }
 
   static #normalizePath(path) {
-    let normalizedPath = path;
-    if (path.endsWith('/')) {
-      normalizedPath = path.slice(0, -1);
+    let normalizedPath = path.split('?')[0]; // Remove query string
+
+    if (normalizedPath.endsWith('/')) {
+      normalizedPath = normalizedPath.slice(0, -1);
     }
-    if (!path.startsWith('/')) {
-      normalizedPath = '/' + path;
+    if (normalizedPath.startsWith('/')) {
+      normalizedPath = normalizedPath.slice(1);
     }
     return normalizedPath;
   }
 
   static #getRouteKeys(path) {
     const normalizedPath = Router.#normalizePath(path);
-    const keys = normalizedPath.split('/').toSpliced(0, 1);
-    return keys;
+    return normalizedPath.split('/');
   }
 
   static #getRouteType(key) {
@@ -105,6 +107,10 @@ export class Router {
 
   static #getRouteParameter(key, routeType) {
     return routeType === ROUTE_TYPES.parameter ? key.slice(1) : undefined;
+  }
+
+  static #getSearchParams(path) {
+    return new URLSearchParams(path.split('?')[1]);
   }
 
   addRoute(path, payload) {
@@ -134,6 +140,7 @@ export class Router {
 
   getRoute(path) {
     const keys = Router.#getRouteKeys(path);
+    const searchParams = Router.#getSearchParams(path);
     let currentNode = this.routerTree;
     const positionalParameters = [];
     const keyParameters = new Map();
@@ -173,7 +180,8 @@ export class Router {
       keyParameters,
       routeType: currentNode.routeType,
       nodeType: currentNode.nodeType,
-      path
+      path,
+      searchParams,
     };
   }
 }

@@ -10,6 +10,7 @@ declare interface RouteResult {
   routeType: 'part' | 'parameter' | 'wildcard';
   nodeType: 'root' | 'branch' | 'leaf';
   path: string;
+  searchParams: URLSearchParams;
 }
 
 export declare class Router {
